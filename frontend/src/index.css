@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cobalt: #0047AB;
+  --color-mint: #98FF98;
+}
+
+body {
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Simple base styles */
+* {
+  box-sizing: border-box;
+}
+
+main {
+  min-height: 100vh;
+}
