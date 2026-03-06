@@ -22,3 +22,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets and credentials
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# Docker
+.docker/
