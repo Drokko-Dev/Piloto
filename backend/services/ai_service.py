@@ -13,8 +13,9 @@ def generate_script(description: str, media_type: str) -> str:
     You are showing {media_context} of a dental procedure.
     Technical Description: {description}
     
-    Write a short 15-20 second voiceover script that translates this technical description into an engaging, easy-to-understand explanation for a general audience.
-    Keep it professional but accessible. Output ONLY the spoken text, no actions, no titles, no emojis or hashtags.
+    Prompt: Escribe un guion corto de 15-20 segundos con voz en off que traduzca esta descripción técnica en una explicación atractiva y fácil de entender para el paciente.
+    Mantenlo profesional pero accesible. SACA SÓLO el texto hablado, sin acciones, sin títulos, sin emojis o hashtags.
+    IMPORTANTE: El guion DEBE estar SIEMPRE en español de Chile (chilenismos moderados, tono cercano pero profesional).
     """
     
     response = client.chat.completions.create(
@@ -67,3 +68,31 @@ def generate_voiceover(text: str, output_dir: str) -> str:
                 f.write(chunk)
                 
     return file_path
+
+def generate_instagram_copy(description: str, script: str) -> str:
+    """Generate an Instagram post copy with emojis and hashtags based on the clinical description and script."""
+    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    
+    prompt = f"""
+    Act as a professional and engaging community manager for a dental clinic in Chile.
+    Based on the following script from a recent procedure video and the original technical description, write an engaging Instagram caption.
+    
+    Technical Description: {description}
+    Video Script: {script}
+    
+    The caption must be in Chilean Spanish, informative but friendly.
+    Include relevant emojis and 5-7 relevant hashtags at the end.
+    Output ONLY the text for the caption.
+    """
+    
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "You are an expert social media manager for dental clinics."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.7,
+        max_tokens=250
+    )
+    
+    return response.choices[0].message.content.strip()

@@ -6,12 +6,14 @@ export default function ProcessingView({ status, error, resultUrl, resetData }) 
   
   const steps = [
     { id: 'generating_script', label: 'Writing AI Script' },
-    { id: 'generating_audio', label: 'Generating Professional Voiceover' },
-    { id: 'processing_video', label: 'Assembling Final Video' }
+    { id: 'generating_preview', label: 'Rendering Visual Draft' },
+    { id: 'generating_final', label: 'Generating Professional Voiceover' },
+    { id: 'generating_copy', label: 'Writing Social Media Copy' },
+    { id: 'publishing', label: 'Publishing to n8n' }
   ];
 
   const getCurrentStepIndex = () => {
-      if (status === 'success') return 3;
+      if (status === 'success') return 5;
       if (status === 'error') return -1;
       return steps.findIndex(s => s.id === status);
   };
@@ -45,7 +47,6 @@ export default function ProcessingView({ status, error, resultUrl, resetData }) 
                 <p className="text-gray-600 mb-8 max-w-md mx-auto">
                     The content has been automatically processed and sent securely to your n8n webhook for publishing.
                 </p>
-                
                 {resultUrl && (
                     <div className="aspect-video w-full max-w-lg mx-auto bg-black rounded-xl overflow-hidden mb-8 shadow-lg">
                         <video controls className="w-full h-full object-contain">

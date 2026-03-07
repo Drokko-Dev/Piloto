@@ -23,6 +23,23 @@ dist-ssr
 *.sln
 *.sw?
 
+# Ignorar archivos generados y subidas
+backend/uploads/*
+backend/generations/*
+
+# Pero mantener las carpetas vacías (opcional)
+!backend/uploads/.gitkeep
+!backend/generations/.gitkeep
+
+# Python (Compilados)
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Temporales de MoviePy
+backend/*TEMP_MPY*
+
 # Secrets and credentials
 .env
 .env.development.local
