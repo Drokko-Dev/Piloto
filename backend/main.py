@@ -24,6 +24,10 @@ app.add_middleware(
 )
 
 os.makedirs("generations", exist_ok=True)
+os.makedirs(os.path.join("generations", "01_previews"), exist_ok=True)
+os.makedirs(os.path.join("generations", "02_voiceovers"), exist_ok=True)
+os.makedirs(os.path.join("generations", "03_final_videos"), exist_ok=True)
+os.makedirs(os.path.join("generations", "04_temp"), exist_ok=True)
 os.makedirs("uploads", exist_ok=True)
 
 app.mount("/outputs", StaticFiles(directory="generations"), name="outputs")
@@ -110,15 +114,16 @@ async def preview_video(
 ):
     try:
         if media_type == 'video' and vid_path:
-            preview_path = process_video_to_preview(vid_path, script_text, "generations")
+            preview_path = process_video_to_preview(vid_path, script_text, os.path.join("generations", "01_previews"))
         elif media_type == 'images' and before_path and after_path:
-            preview_path = process_photos_to_preview(before_path, after_path, script_text, "generations")
+            preview_path = process_photos_to_preview(before_path, after_path, script_text, os.path.join("generations", "01_previews"))
         else:
             return {"error": "Invalid media provided"}
             
         base_url = str(request.base_url).rstrip('/')
-        filename = os.path.basename(preview_path)
-        return {"status": "success", "preview_url": f"{base_url}/outputs/{filename}", "preview_path": preview_path}
+        # Return path relative to generations so the frontend can read from /outputs
+        rel_path = os.path.relpath(preview_path, "generations")
+        return {"status": "success", "preview_url": f"{base_url}/outputs/{rel_path}", "preview_path": preview_path}
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -132,12 +137,12 @@ async def finalize_video(
     preview_path: str = Form(...)
 ):
     try:
-        audio_path = "generations/voiceover_bf999b1f.mp3" #generate_voiceover(script_text, "generations")
-        final_video_path = finalize_video_with_voice(preview_path, audio_path, "generations")
+        audio_path ="generations/02_voiceovers/voiceover_081c5d92.mp3"  #generate_voiceover(script_text, os.path.join("generations", "02_voiceovers")) 
+        final_video_path = finalize_video_with_voice(preview_path, audio_path, os.path.join("generations", "03_final_videos"))
         
         base_url = str(request.base_url).rstrip('/')
-        filename = os.path.basename(final_video_path)
-        return {"status": "success", "final_video_url": f"{base_url}/outputs/{filename}", "final_video_path": final_video_path, "audio_path": audio_path}
+        rel_path = os.path.relpath(final_video_path, "generations")
+        return {"status": "success", "final_video_url": f"{base_url}/outputs/{rel_path}", "final_video_path": final_video_path, "audio_path": audio_path}
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -174,7 +179,25 @@ async def publish(
     try:
         combined_text = f"{script_text}\n\nINSTAGRAM COPY:\n{copy_text}"
         background_tasks.add_task(send_to_n8n, final_video_path, description, combined_text)
+        
+        # Cleanup
+        temps_dir = os.path.join("generations", "04_temp")
+        previews_dir = os.path.join("generations", "01_previews")
         background_tasks.add_task(cleanup_files, vid_path, before_path, after_path, preview_path, audio_path)
+        
+        # Clean folder entirely, we can't reliably know the temp MPY intermediate files 
+        def cleanup_temp_dirs(temps_dir):
+            if os.path.exists(temps_dir):
+                import shutil
+                try:
+                    for filename in os.listdir(temps_dir):
+                        file_path = os.path.join(temps_dir, filename)
+                        if os.path.isfile(file_path):
+                            os.remove(file_path)
+                except Exception:
+                    pass
+        background_tasks.add_task(cleanup_temp_dirs, temps_dir)
+        
         return {"status": "success"}
     except Exception as e:
         import traceback

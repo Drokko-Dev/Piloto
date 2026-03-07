@@ -98,7 +98,8 @@ def process_photos_to_preview(before_path, after_path, script, output_dir):
     out_path = os.path.join(output_dir, f"video_photos_preview_{uuid.uuid4().hex[:8]}.mp4")
     
     # Render with limited threads to optimize memory usage (4GB limit)
-    final_video.write_videofile(out_path, fps=24, codec="libx264", audio_codec="aac", threads=2)
+    temp_audio = os.path.join(os.getcwd(), "generations", "04_temp", f"temp_aud_{uuid.uuid4().hex[:8]}.m4a")
+    final_video.write_videofile(out_path, fps=24, codec="libx264", audio_codec="aac", temp_audiofile=temp_audio, remove_temp=True, threads=2)
     return out_path
 
 def process_video_to_preview(video_path, script, output_dir):
@@ -148,7 +149,8 @@ def process_video_to_preview(video_path, script, output_dir):
     out_path = os.path.join(output_dir, f"video_vid_preview_{uuid.uuid4().hex[:8]}.mp4")
     
     # Render with limited threads to optimize memory usage (4GB limit)
-    final_video.write_videofile(out_path, fps=24, codec="libx264", audio_codec="aac", threads=2)
+    temp_audio = os.path.join(os.getcwd(), "generations", "04_temp", f"temp_aud_{uuid.uuid4().hex[:8]}.m4a")
+    final_video.write_videofile(out_path, fps=24, codec="libx264", audio_codec="aac", temp_audiofile=temp_audio, remove_temp=True, threads=2)
     return out_path
 
 def finalize_video_with_voice(preview_path, audio_path, output_dir):
@@ -178,14 +180,15 @@ def finalize_video_with_voice(preview_path, audio_path, output_dir):
     out_path = os.path.join(output_dir, f"video_final_{uuid.uuid4().hex[:8]}.mp4")
     
     # 4. Error Handling & Retry
+    temp_audio = os.path.join(os.getcwd(), "generations", "04_temp", f"temp_aud_{uuid.uuid4().hex[:8]}.m4a")
     try:
-        final_video.write_videofile(out_path, fps=24, codec="libx264", audio_codec="aac", threads=2)
+        final_video.write_videofile(out_path, fps=24, codec="libx264", audio_codec="aac", temp_audiofile=temp_audio, remove_temp=True, threads=2)
     except Exception as e:
         print(f"Warning: Render failed with duration {final_duration}. Retrying with shorter duration. Error: {e}")
         retry_duration = final_duration - 0.1
         if retry_duration > 0:
             final_video = final_video.with_duration(retry_duration)
-            final_video.write_videofile(out_path, fps=24, codec="libx264", audio_codec="aac", threads=2)
+            final_video.write_videofile(out_path, fps=24, codec="libx264", audio_codec="aac", temp_audiofile=temp_audio, remove_temp=True, threads=2)
         else:
             raise e
     
