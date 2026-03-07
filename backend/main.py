@@ -61,7 +61,7 @@ async def generate_video(
                 
             script = generate_script(description, 'video')
             audio_path = generate_voiceover(script, "generations")
-            final_video_path = process_video_to_video(vid_path, audio_path, "generations")
+            final_video_path = process_video_to_video(vid_path, audio_path, script, "generations")
             
         elif media_type == 'images' and before_image and after_image:
             before_path = f"uploads/{session_id}_before_{before_image.filename}"
@@ -73,7 +73,7 @@ async def generate_video(
                 
             script = generate_script(description, 'images')
             audio_path = generate_voiceover(script, "generations")
-            final_video_path = process_photos_to_video(before_path, after_path, audio_path, "generations")
+            final_video_path = process_photos_to_video(before_path, after_path, audio_path, script, "generations")
             
         else:
             return {"error": "Invalid media provided"}
