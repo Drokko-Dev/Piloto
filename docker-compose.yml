@@ -18,6 +18,7 @@ services:
       - R2_PUBLIC_URL=${R2_PUBLIC_URL}
     volumes:
       - ./backend:/app
+      - kokoro-cache:/root/.cache/kokoro
     deploy:
       resources:
         limits:
@@ -29,3 +30,6 @@ services:
       context: ./frontend
     ports:
       - "3000:3000"
+
+volumes:
+  kokoro-cache:

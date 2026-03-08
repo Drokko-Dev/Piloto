@@ -1,9 +1,11 @@
 FROM python:3.11-slim
 
-# Install system dependencies for MoviePy and ImageMagick
+# Install system dependencies for MoviePy, ImageMagick, and Kokoro
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     imagemagick \
+    libsndfile1 \
+    espeak-ng \
     && rm -rf /var/lib/apt/lists/*
 
 # Relax ImageMagick security policy for TextClips (MoviePy needs this)

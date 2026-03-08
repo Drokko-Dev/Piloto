@@ -180,7 +180,7 @@ async def finalize_video(
     preview_path: str = Form(...)
 ):
     try:
-        audio_path ="generations/02_voiceovers/voiceover_081c5d92.mp3"  #generate_voiceover(script_text, os.path.join("generations", "02_voiceovers")) 
+        audio_path = generate_voiceover(script_text, os.path.join("generations", "02_voiceovers"))
         final_video_path = finalize_video_with_voice(preview_path, audio_path, os.path.join("generations", "03_final_videos"))
         
         base_url = str(request.base_url).rstrip('/')
