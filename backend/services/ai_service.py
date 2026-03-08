@@ -2,6 +2,7 @@ import os
 import requests
 from openai import OpenAI
 import uuid
+import re
 
 def generate_script(description: str, media_type: str) -> str:
     """Generate a short TikTok/Reel script based on technical description."""
@@ -30,6 +31,40 @@ def generate_script(description: str, media_type: str) -> str:
     
     return response.choices[0].message.content.strip()
 
+def pre_process_dental_script(text: str):
+    # 1. Normalización de Siglas y Números (Erre-dos, I-A)
+    replacements = {
+        r"\bR2\b": "erre dos",
+        r"\bIA\b": "i a",
+        r"\bAI\b": "i a",
+        r"(\d+)\s?MB": r"\1 megas",
+        r"Reel": "rril",
+        r"post": "poust"
+    }
+    
+    for pattern, replacement in replacements.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+
+    # 2. Ortografía Fonética para acentos latinos
+    # Forzamos tildes donde la IA suele equivocarse
+    phonetic_fixes = {
+        "dental": "dentál",
+        "incrustación": "incrustasión",
+        "resina": "ressina",
+        "odontólogo": "odonto-logo"
+    }
+    
+    for word, fixed in phonetic_fixes.items():
+        text = text.replace(word, fixed)
+
+    # 3. Puntuación Exagerada para "Respiración"
+    # Cambiamos puntos por puntos suspensivos y comas para dar pausas
+    text = text.replace(". ", "... ")
+    text = text.replace(", ", ",,, ") 
+    
+    return text
+
+
 def generate_voiceover(text: str, output_dir: str) -> str:
     """Generate voiceover using local Kokoro TTS."""
     try:
@@ -38,15 +73,19 @@ def generate_voiceover(text: str, output_dir: str) -> str:
         import os
         import uuid
         
+        # 1. APLICAR EL AJUSTE FONÉTICO ANTES DE GENERAR
+        # Esto transforma "dental" en "dentál" y añade las pausas ,,,
+        pre_process_text = pre_process_dental_script(text)
+
         # Initialize pipeline for Spanish
         pipeline = KPipeline(lang_code='es')
         
         # Choose voice (e.g. af_bella adapted to Spanish) and speed
-        voice = 'af_bella' 
-        speed = 1.1
+        voice = 'af_bella' #'am_michael'
+        speed = 1.15  #1.1
 
         # KPipeline generator yields (graphemes, phonemes, audio)
-        generator = pipeline(text, voice=voice, speed=speed, split_pattern=r'\n+')
+        generator = pipeline(pre_process_text, voice=voice, speed=speed, split_pattern=r'\n+')
         
         audio_segments = []
         for i, (gs, ps, audio) in enumerate(generator):
