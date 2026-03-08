@@ -30,6 +30,16 @@ backend/generations/*
 # Pero mantener las carpetas vacías (opcional)
 !backend/uploads/.gitkeep
 !backend/generations/.gitkeep
+!backend/piper_models/.gitkeep
+!generations/.gitkeep
+**/generations/*
+!**/generations/.gitkeep
+
+# Ignoramos los modelos de IA (pesan mucho para Git estándar)
+# Nota: Si decides usar Git LFS, podrías quitarlos de aquí
+piper_models/*.onnx
+piper_models/*.json
+!piper_models/.gitkeep
 
 # Python (Compilados)
 **/__pycache__/

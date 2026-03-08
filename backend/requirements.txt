@@ -7,6 +7,3 @@ openai
 elevenlabs
 requests
 boto3
-kokoro
-soundfile
-misaki[es]
