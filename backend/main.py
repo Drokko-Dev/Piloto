@@ -6,6 +6,7 @@ import shutil
 import os
 import uuid
 import requests
+import boto3
 from dotenv import load_dotenv
 
 from services.ai_service import generate_script, generate_voiceover, generate_instagram_copy
@@ -31,19 +32,61 @@ os.makedirs(os.path.join("generations", "04_temp"), exist_ok=True)
 os.makedirs("uploads", exist_ok=True)
 
 app.mount("/outputs", StaticFiles(directory="generations"), name="outputs")
+app.mount("/videos", StaticFiles(directory="generations/03_final_videos"), name="videos")
+
+def upload_video_to_r2(video_path: str):
+    bucket = os.getenv("R2_BUCKET")
+    if not bucket:
+        raise ValueError("ERROR: La variable R2_BUCKET no está configurada en el .env")
+    account_id = os.getenv("R2_ACCOUNT_ID")
+    access_key = os.getenv("R2_ACCESS_KEY")
+    secret_key = os.getenv("R2_SECRET_KEY")
+    public_url = os.getenv("R2_PUBLIC_URL")
+
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=f"https://{account_id}.r2.cloudflarestorage.com",
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        region_name="auto"
+    )
+
+    filename = os.path.basename(video_path)
+
+    s3.upload_file(
+        video_path,
+        bucket,
+        filename,
+        ExtraArgs={"ContentType": "video/mp4"}
+    )
+
+    return f"{public_url}/{filename}"
 
 def send_to_n8n(video_path: str, description: str, script: str):
     url = os.environ.get("N8N_WEBHOOK_URL")
-    if not url: return
+    print(f"DEBUG: Iniciando envío a n8n. URL: {url}") # Agrega esto
     
+    if not url:
+        print("DEBUG: No hay URL de webhook configurada")
+        return
+
     try:
-        with open(video_path, 'rb') as f:
-            files = {'file': (os.path.basename(video_path), f, 'video/mp4')}
-            data = {'description': description, 'script': script}
-            requests.post(url, files=files, data=data)
-            print(f"Sent webhook successfully to {url}")
+        print(f"DEBUG: Subiendo {video_path} a R2...")
+        video_url = upload_video_to_r2(video_path)
+        print(f"DEBUG: Video subido con éxito: {video_url}")
+
+        payload = {
+            "video_url": video_url,
+            "caption": script
+        }
+
+        response = requests.post(url, json=payload)
+        print(f"DEBUG: Respuesta de n8n: {response.status_code} - {response.text}")
+
     except Exception as e:
-        print(f"Webhook error: {e}")
+        print(f"ERROR CRÍTICO en Webhook: {str(e)}")
+        import traceback
+        traceback.print_exc() # Esto te dirá la línea exacta del fallo
 
 def cleanup_files(*paths):
     for p in paths:
@@ -177,8 +220,8 @@ async def publish(
     preview_path: str = Form("")
 ):
     try:
-        combined_text = f"{script_text}\n\nINSTAGRAM COPY:\n{copy_text}"
-        background_tasks.add_task(send_to_n8n, final_video_path, description, combined_text)
+        #combined_text = f"{script_text}\n\nINSTAGRAM COPY:\n{copy_text}"
+        background_tasks.add_task(send_to_n8n, final_video_path, description, copy_text)
         
         # Cleanup
         temps_dir = os.path.join("generations", "04_temp")

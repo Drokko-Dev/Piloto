@@ -49,3 +49,7 @@ backend/*TEMP_MPY*
 
 # Docker
 .docker/
+
+# Entornos Virtuales
+venv/
+.venv/
