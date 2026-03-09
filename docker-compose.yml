@@ -23,8 +23,27 @@ services:
         reservations:
           memory: 1G
 
+  xtts-service:
+    build:
+      context: ./xtts-service
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./xtts-service:/app
+      - xtts-cache:/root/.local/share/tts
+      - ./generations:/app/generations
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+
   frontend:
     build:
       context: ./frontend
     ports:
       - "3000:3000"
+
+volumes:
+  xtts-cache:

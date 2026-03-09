@@ -32,49 +32,11 @@ def generate_script(description: str, media_type: str) -> str:
     
     return response.choices[0].message.content.strip()
 
+from services.tts_service import generate_voice
+
 def generate_voiceover(text: str, output_dir: str) -> str:
-    """Generate voiceover using Piper with optimized settings."""
-    try:
-        os.makedirs(output_dir, exist_ok=True)
-
-        raw_file = os.path.join(output_dir, f"voice_raw_{uuid.uuid4().hex[:8]}.wav")
-        final_file = os.path.join(output_dir, f"voiceover_{uuid.uuid4().hex[:8]}.wav")
-
-        model_path = "/app/piper_models/es_MX-ald-medium.onnx"
-
-        command = [
-            "piper",
-            "--model", model_path,
-            "--output_file", raw_file,
-            "--length_scale", "1.15",  # velocidad natural
-            "--noise_scale", "0.6",   # naturalidad
-            "--noise_w", "0.4"          # entonación
-        ]
-
-        process = subprocess.Popen(
-            command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8"
-        )
-
-        text = clean_tts_text(text)
-        stdout, stderr = process.communicate(input=text)
-
-        if process.returncode != 0:
-            raise Exception(f"Piper error: {stderr}")
-
-        # normalizamos volumen con ffmpeg
-        normalize_audio(raw_file, final_file)
-
-        print(f"DEBUG: Audio generado en {final_file}")
-        return final_file
-
-    except Exception as e:
-        print(f"ERROR: Local TTS generation failed: {str(e)}")
-        raise
+    """Generate voiceover by delegating to the new tts_service."""
+    return generate_voice(text, output_dir)
 
 def normalize_audio(input_file: str, output_file: str):
     """Normalize audio volume using ffmpeg."""

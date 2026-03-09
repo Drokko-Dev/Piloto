@@ -1,0 +1,9 @@
+fastapi==0.104.1
+uvicorn==0.24.0
+python-multipart==0.0.6
+TTS==0.22.0
+soundfile==0.12.1
+aiofiles==23.2.1
+transformers==4.36.2
+torch
+torchaudio

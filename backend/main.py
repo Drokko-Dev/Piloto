@@ -24,15 +24,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-os.makedirs("generations", exist_ok=True)
-os.makedirs(os.path.join("generations", "01_previews"), exist_ok=True)
-os.makedirs(os.path.join("generations", "02_voiceovers"), exist_ok=True)
-os.makedirs(os.path.join("generations", "03_final_videos"), exist_ok=True)
+os.makedirs(os.path.join("generations", "00_inputs"), exist_ok=True)
+os.makedirs(os.path.join("generations", "01_scripts"), exist_ok=True)
+os.makedirs(os.path.join("generations", "02_audio"), exist_ok=True)
+os.makedirs(os.path.join("generations", "03_preview"), exist_ok=True)
 os.makedirs(os.path.join("generations", "04_temp"), exist_ok=True)
-os.makedirs("uploads", exist_ok=True)
+os.makedirs(os.path.join("generations", "05_preview_nosub"), exist_ok=True)
+os.makedirs(os.path.join("generations", "06_final"), exist_ok=True)
 
 app.mount("/outputs", StaticFiles(directory="generations"), name="outputs")
-app.mount("/videos", StaticFiles(directory="generations/03_final_videos"), name="videos")
+app.mount("/videos", StaticFiles(directory="generations/06_final"), name="videos")
 
 def upload_video_to_r2(video_path: str):
     bucket = os.getenv("R2_BUCKET")
@@ -112,15 +113,15 @@ async def generate_script_endpoint(
         after_path = ""
         
         if media_type == 'video' and video_file:
-            vid_path = f"uploads/{session_id}_{video_file.filename}"
+            vid_path = f"generations/00_inputs/{session_id}_{video_file.filename}"
             with open(vid_path, "wb") as f:
                 shutil.copyfileobj(video_file.file, f)
                 
             script = generate_script(description, 'video')
             
         elif media_type == 'images' and before_image and after_image:
-            before_path = f"uploads/{session_id}_before_{before_image.filename}"
-            after_path = f"uploads/{session_id}_after_{after_image.filename}"
+            before_path = f"generations/00_inputs/{session_id}_before_{before_image.filename}"
+            after_path = f"generations/00_inputs/{session_id}_after_{after_image.filename}"
             
             with open(before_path, "wb") as f, open(after_path, "wb") as f2:
                 shutil.copyfileobj(before_image.file, f)
@@ -130,6 +131,10 @@ async def generate_script_endpoint(
             
         else:
             return {"error": "Invalid media provided"}
+            
+        script_path = f"generations/01_scripts/{session_id}_script.txt"
+        with open(script_path, "w", encoding="utf-8") as f:
+            f.write(script)
             
         return {
             "status": "success", 
@@ -156,17 +161,20 @@ async def preview_video(
     after_path: str = Form("")
 ):
     try:
+        # NEW pipeline order: Voice generated before preview
+        audio_path = generate_voiceover(script_text, os.path.join("generations", "02_audio"))
+        
         if media_type == 'video' and vid_path:
-            preview_path = process_video_to_preview(vid_path, script_text, os.path.join("generations", "01_previews"))
+            preview_path = process_video_to_preview(vid_path, script_text, audio_path, os.path.join("generations", "03_preview"))
         elif media_type == 'images' and before_path and after_path:
-            preview_path = process_photos_to_preview(before_path, after_path, script_text, os.path.join("generations", "01_previews"))
+            preview_path = process_photos_to_preview(before_path, after_path, script_text, audio_path, os.path.join("generations", "03_preview"))
         else:
             return {"error": "Invalid media provided"}
             
         base_url = str(request.base_url).rstrip('/')
         # Return path relative to generations so the frontend can read from /outputs
         rel_path = os.path.relpath(preview_path, "generations")
-        return {"status": "success", "preview_url": f"{base_url}/outputs/{rel_path}", "preview_path": preview_path}
+        return {"status": "success", "preview_url": f"{base_url}/outputs/{rel_path}", "preview_path": preview_path, "audio_path": audio_path}
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -177,11 +185,11 @@ async def preview_video(
 async def finalize_video(
     request: Request,
     script_text: str = Form(...),
-    preview_path: str = Form(...)
+    preview_path: str = Form(...),
+    audio_path: str = Form(...)
 ):
     try:
-        audio_path = generate_voiceover(script_text, os.path.join("generations", "02_voiceovers"))
-        final_video_path = finalize_video_with_voice(preview_path, audio_path, os.path.join("generations", "03_final_videos"))
+        final_video_path = finalize_video_with_voice(preview_path, audio_path, os.path.join("generations", "06_final"))
         
         base_url = str(request.base_url).rstrip('/')
         rel_path = os.path.relpath(final_video_path, "generations")
@@ -225,7 +233,7 @@ async def publish(
         
         # Cleanup
         temps_dir = os.path.join("generations", "04_temp")
-        previews_dir = os.path.join("generations", "01_previews")
+        previews_dir = os.path.join("generations", "03_preview")
         background_tasks.add_task(cleanup_files, vid_path, before_path, after_path, preview_path, audio_path)
         
         # Clean folder entirely, we can't reliably know the temp MPY intermediate files 
